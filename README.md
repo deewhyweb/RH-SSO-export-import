@@ -3,44 +3,25 @@
 
 ## Export
 
-From the source project, scale down the sso application
+Login to the RH SSO console as administrator
 
-`oc scale --replicas=0 dc/sso`
+Select the realm required for export.
 
-Add a JAVA_OPTS_APPEND environment variable to trigger the export 
+Select the "Export" link on the left hand menu.
 
-`oc set env dc/sso -e "JAVA_OPTS_APPEND=-Dkeycloak.migration.action=export -Dkeycloak.migration.provider=singleFile -Dkeycloak.migration.file=/tmp/demorealm-export.json"`
+Ensure both "Export groups and roles" and "Export clients" are set to "On"
 
-Scale the deployment back to one pod
+Click on export
 
-`oc scale --replicas=1 dc/sso`
+The realm data will be exported to a file calles realm-export.json
 
-Monitor the logs for the export to complete
-
-`oc logs -f   $(oc get pod -l deploymentConfig=sso -o jsonpath="{.items[0].metadata.name}")`
-
-Once the export is complete, copy the file from the pod to local machine
-
-`oc rsync $(oc get pod -l deploymentConfig=sso -o jsonpath="{.items[0].metadata.name}"):/tmp/demorealm-export.json .`
-
-Scale down the deployment
-
-`oc scale --replicas=0 dc/sso`
-
-Remove the JAVA_OPTS_APPEND env variable
-
-`oc set env dc/sso -e "JAVA_OPTS_APPEND="`
-
-Scale the sso deployment back to one pod
-
-`oc scale --replicas=1 dc/sso`
 
 ## Import
 Switch to destination project
 
 Create a config map using the export file
 
-`oc create configmap sso-import --from-file=./demorealm-export.json`
+`oc create configmap sso-import --from-file=./realm-export.json`
 
 Attach the config map as a volume
 
@@ -50,9 +31,9 @@ Scale down the deployment to 0
 
 `oc scale --replicas=0 dc/sso`
 
-Update the JAVA_OPTS_APPEND env variable to trigger the import
+Update the JAVA_OPTS_APPEND env variable to trigger the import by adding the following string.
 
-`oc set env dc/sso -e "JAVA_OPTS_APPEND=-Dkeycloak.migration.action=import -Dkeycloak.migration.provider=singleFile -Dkeycloak.migration.file=/tmp/upload/demorealm-export.json"`
+`JAVA_OPTS_APPEND=-Dkeycloak.migration.action=import -Dkeycloak.migration.provider=singleFile -Dkeycloak.migration.file=/tmp/upload/realm-export.json"`
 
 Scale up the deployment to 1 replica
 
@@ -64,14 +45,7 @@ Monitor the logs for the import to complete
 
 Test the login and realm settings
 
-Scale down the deployment
-
-`oc scale --replicas=0 dc/sso`
 
 Remove the JAVA_OPTS_APPEND env variable
 
 `oc set env dc/sso -e "JAVA_OPTS_APPEND="`
-
-Scale the sso deployment back to one pod
-
-`oc scale --replicas=1 dc/sso`
